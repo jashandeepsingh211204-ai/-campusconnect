@@ -1,0 +1,340 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ======================================================
+// AUTHENTICATION
+// ======================================================
+
+model User {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String   @unique
+  password  String
+  role      String   @default("STUDENT")
+
+  phone     String?
+  location  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  submissions AssignmentSubmission[]
+  projectUploads ProjectUpload[]
+}
+
+// ======================================================
+// UNIVERSITY / PROGRAMME STRUCTURE
+// ======================================================
+
+model University {
+  id        Int      @id @default(autoincrement())
+  name      String
+  city      String?
+  country   String?
+  createdAt DateTime @default(now())
+
+  programmes Programme[]
+  sources    SourceDocument[]
+}
+
+model Programme {
+  id             Int     @id @default(autoincrement())
+  name           String
+  degree         String?
+  specialization String?
+  duration       String?
+  mode           String?
+  totalCredits   Int?
+  examination    String?
+
+  universityId Int
+
+  university University       @relation(fields: [universityId], references: [id], onDelete: Cascade)
+  semesters  Semester[]
+  sources    SourceDocument[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([universityId, name, specialization])
+}
+
+model Semester {
+  id          Int     @id @default(autoincrement())
+  number      Int
+  name        String
+  description String?
+
+  programmeId Int
+
+  programme Programme        @relation(fields: [programmeId], references: [id], onDelete: Cascade)
+  subjects  Subject[]
+  sources   SourceDocument[]
+
+  @@unique([programmeId, number])
+}
+
+// ======================================================
+// SUBJECT / PAPER
+// ======================================================
+
+model Subject {
+  id         Int     @id @default(autoincrement())
+  code       String
+  name       String
+  category   String?
+  semesterId Int
+
+  // Academic structure
+  theoryPracticalLectures String?
+  universityExamMarks     Int?
+  internalAssessmentMarks Int?
+  totalMarks              Int?
+  credits                 Int?
+
+  // Detailed academic information
+  objectives String?
+  outcomes   String?
+
+  semester Semester @relation(fields: [semesterId], references: [id], onDelete: Cascade)
+
+  syllabusUnits  SyllabusUnit[]
+  exams          Exam[]
+  materials      StudyMaterial[]
+  assignments    Assignment[]
+  projects       Project[]
+  projectUploads ProjectUpload[]
+  books          Book[]
+  previousPapers PreviousPaper[]
+  sources        SourceDocument[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([semesterId, code])
+}
+
+// ======================================================
+// SYLLABUS
+// ======================================================
+
+model SyllabusUnit {
+  id          Int     @id @default(autoincrement())
+  unitNumber  Int
+  title       String
+  description String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  topics SyllabusTopic[]
+
+  @@unique([subjectId, unitNumber])
+}
+
+model SyllabusTopic {
+  id     Int    @id @default(autoincrement())
+  topic  String
+  unitId Int
+
+  unit SyllabusUnit @relation(fields: [unitId], references: [id], onDelete: Cascade)
+}
+
+// ======================================================
+// EXAMS
+// ======================================================
+
+model Exam {
+  id           Int       @id @default(autoincrement())
+  title        String
+  examType     String?
+  examDate     DateTime?
+  duration     String?
+  totalMarks   Int?
+  instructions String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ======================================================
+// STUDY MATERIALS
+// ======================================================
+
+model StudyMaterial {
+  id          Int     @id @default(autoincrement())
+  title       String
+  type        String
+  description String?
+  url         String?
+  sourcePage  String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ======================================================
+// ASSIGNMENTS
+// ======================================================
+
+model Assignment {
+  id          Int       @id @default(autoincrement())
+  title       String
+  description String?
+  dueDate     DateTime?
+  maxMarks    Int?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  submissions AssignmentSubmission[]
+
+  createdAt DateTime @default(now())
+}
+
+model AssignmentSubmission {
+  id           Int       @id @default(autoincrement())
+  assignmentId Int
+  userId       Int
+  status       String    @default("PENDING")
+  marks        Float?
+  submittedAt  DateTime?
+
+  assignment Assignment @relation(fields: [assignmentId], references: [id], onDelete: Cascade)
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([assignmentId, userId])
+}
+
+// ======================================================
+// PROJECTS
+// ======================================================
+
+model Project {
+  id           Int     @id @default(autoincrement())
+  title        String
+  description  String?
+  requirements String?
+  type         String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ======================================================
+// RECOMMENDED BOOKS
+// ======================================================
+
+model Book {
+  id        Int     @id @default(autoincrement())
+  title     String
+  author    String?
+  edition   String?
+  publisher String?
+  isbn      String?
+  url       String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ======================================================
+// PREVIOUS YEAR PAPERS
+// ======================================================
+
+model PreviousPaper {
+  id         Int     @id @default(autoincrement())
+  title      String
+  year       Int?
+  examType   String?
+  fileUrl    String?
+  sourcePage String?
+
+  subjectId Int
+
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
+
+// ======================================================
+// NOTICES
+// ======================================================
+
+model Notice {
+  id          Int      @id @default(autoincrement())
+  title       String
+  content     String
+  category    String?
+  important   Boolean  @default(false)
+  pinned      Boolean  @default(false)
+  publishedAt DateTime @default(now())
+
+  sourceId Int?
+
+  source SourceDocument? @relation(fields: [sourceId], references: [id], onDelete: SetNull)
+}
+
+// ======================================================
+// SOURCE DOCUMENTS
+// ======================================================
+
+model SourceDocument {
+  id          Int       @id @default(autoincrement())
+  name        String
+  fileType    String?
+  description String?
+  fileUrl     String?
+  sourceDate  DateTime?
+
+  universityId Int?
+  programmeId  Int?
+  semesterId   Int?
+  subjectId    Int?
+
+  university University? @relation(fields: [universityId], references: [id], onDelete: SetNull)
+  programme  Programme?  @relation(fields: [programmeId], references: [id], onDelete: SetNull)
+  semester   Semester?   @relation(fields: [semesterId], references: [id], onDelete: SetNull)
+  subject    Subject?    @relation(fields: [subjectId], references: [id], onDelete: SetNull)
+
+  notices Notice[]
+
+  createdAt DateTime @default(now())
+}
+
+model ProjectUpload {
+  id Int @id @default(autoincrement())
+
+  fileName String?
+  fileUrl  String?
+  fileType String?
+  fileSize Int?
+
+  projectLink String?
+
+  userId    Int
+  subjectId Int
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+}
